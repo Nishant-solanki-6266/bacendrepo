@@ -13,9 +13,6 @@ const generateAccessAndRefreshTokens = async userId => {
 
     // user me dal diya  then save bhi krvana hai,
     user.refreshToken = refreshToken
-    // console.log("userrrr", user);
-
-    // save kr diya database me,yha save hua
     await user.save({ validateBeforeSave: false }) // validatebefore isliye ki hr bar password nhi hoga
 
     //  or jo bhi  ye methord use krega return me accesstoken or refreshtoken bhej dega
@@ -30,7 +27,6 @@ const generateAccessAndRefreshTokens = async userId => {
 }
 // register user:-----
 const registerUser = asyncHandler(async (req, res) => {
-  // form ,json se data hmesa req,body me hadle kiya jata hai , url ko alg se handle krte hai
   const { fullname, username, email, password } = req.body
   console.log('username:-', email)
 
@@ -49,16 +45,12 @@ const registerUser = asyncHandler(async (req, res) => {
   if (exitedUser) {
     throw new ApiError(409, 'User with email or username already existed!')
   }
-  // multer se avatar lenaa
   const avatarLocalPath = req.files?.avatar[0]?.path
-  // jb coverImage na bhje const coverImagePath=req.files?.coverImage[0]?.path;
 
-  // classic tarike se coverImage ydi na send kre to
   let coverImagePath
   if (req.files && Array.isArray(req.files) && req.files.length > 0) {
     coverImagePath = req.files.coverImage[0].path
-  } // ye line mtlb req.files hai and array me hai and length 0 se bdi ho
-
+  } 
   if (!avatarLocalPath) {
     throw new ApiError(400, 'avatar file is required')
   }
@@ -78,7 +70,6 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase(),
     password
   })
-  // full prrof user create hua hai or usi user ke password ko remove bhi kr do
 
   const createUser = await User.findById(user._id).select(
     '-password -refreshToken'
@@ -88,8 +79,6 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, 'something went wrong while registering the user')
   }
 
-  // return responce
-  //  console.log("coverImage",coverImage);
 
   return res
     .status(201)
@@ -98,25 +87,20 @@ const registerUser = asyncHandler(async (req, res) => {
 
 //  login
 const loginUser = asyncHandler(async (req, res) => {
-  // data liya -> req.body se
   const { username, email, password } = req.body
 
-  // validation :- username or email na hoto
   if (!(username || email)) {
     throw new ApiError(400, 'Username or Password Required')
   }
 
-  // or hmne user nikal liya // username or email ke base pr
   const user = await User.findOne({
     $or: [{ username }, { email }] // pura object dega yaha se
   })
 
-  //  console.log("user",user);
 
   if (!user) {
     throw new ApiError(404, 'User Does Not Exist')
   }
-  //  console.log("yha check kr ki user me pura data aaya refresh ko chordkar",user);
 
   // ab Password check kr liya hmne .
   const isPasswordValid = await user.isPasswordCorrect(password)
@@ -125,12 +109,10 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, 'Invalid User Creditials')
   }
 
-  // generate AccessToken or RefreshToken wali methord ko coll kiya.
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     user._id
   )
 
-  //  yha hum jo 110 line me user nikala tha uske pas beta refreshToken nhi hoga kyuki generate methord to 125 line me hai to vha se database me refreshToken  save hoga. to  aage ak bar or database Query markar loggeduser  le lege. or usme refresh or password hide kr dege
 
   const LoggedInUser = await User.findById(user._id).select(
     '-password -refreshToken'
@@ -142,7 +124,6 @@ const loginUser = asyncHandler(async (req, res) => {
     httpOnly: true,
     secure: true
   }
-  //  return responce, kbhi kbhi modile app me cookie send nhi kr pate isliye apiResponce me bhi rereshToken or accesstoken send kr diya hai
 
   return res
     .status(200)
@@ -154,11 +135,10 @@ const loginUser = asyncHandler(async (req, res) => {
         { user: LoggedInUser, accessToken, refreshToken },
         'User Logged in SuccessFully'
       )
-    ) // res me bhej diya hai
+    ) 
 })
 // logout
 const logOutUser = asyncHandler(async (req, res) => {
-  // console.log("controller",req.user._id);
 
   await User.findByIdAndUpdate(
     req.user._id,
@@ -187,7 +167,6 @@ const logOutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponce(200, {}, 'User loggedOut SuccessFully'))
 })
 
-// AccessToken Expiry ho jaye or RefrshToken Ke base par Nya AccessTokeen bnana hoto
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const inComingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
   if (!inComingRefreshToken) {
@@ -201,15 +180,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     )
     console.log('check kr kya kya aata hai', decodedToken)
 
-    // check krege database me ye decodedToken se ID nikal  kr Pura USer nikal lege.
     const user = await User.findById(decodedToken?._id)
     if (!user) {
       throw new ApiError(401, 'invalid RefreshToken')
     }
 
-    //Ab Match kr lege jo req.cookie se nikala refrshToken or user._id me save kiya tha vo  same hai to aage bado
     if (inComingRefreshToken == user?.refreshToken) {
-      //const user=await User;  is user me pura data hoga refreshtoken bhi hoga
       throw new ApiError(401, 'RefreshToken is Expired hai ya to used')
     }
 
@@ -221,9 +197,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
       user._id
-    ) // yha newAccess newRef le liya is bar kyuki ak bar phle use kr chuke hai hum
-
-    //  return responce
+    ) 
     return res
       .status(200)
       .cookie('accessToken', accessToken, options)
@@ -240,22 +214,18 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 })
 
-// ab Hum update wali cheeze bnayeg.
 const updateCurrentPassword = asyncHandler(async (req, res) => {
-  // postmen se le liya password;
   const { oldPassword, newPassowrd } = req.body
 
   // verifyJwt se user login wala milega;
   const user = await User.findById(req?.user._id)
 
-  // ab jo hmare user mtlb database me ak methord hai password  correct wali se hum password confirm krba lege.
 
   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
   if (!isPasswordCorrect) {
     throw new ApiError(400, 'Password is Incorrect')
   }
 
-  // ab new passoword ko oldpassword se replace kr do.or save kr do.
 
   user.password = newPassowrd
   await user.save({ validateBeforeSave: false })
@@ -266,20 +236,16 @@ const updateCurrentPassword = asyncHandler(async (req, res) => {
     .json(new ApiResponce(200, {}, 'Password is SuccessFully Update'))
 })
 
-//  currentUser nikal lege ki kon Login hai.
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponce(200, req.user, 'Current User  Fetched SuccessFully!'))
 })
-// Account ke andr ki details kon kon si update krna hai vo wala control.image vgera ke alg controller likhe jate hai.
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  // body se value le li update wali.
   const { fullname, email } = req.body
   if (!fullname && !email) {
     throw new ApiError(400, 'FullName and Email is required for updation!')
   }
-  // ab user nikal ke Update kr dege value or new True ka mtlb update krke return kr do value ko
   const user = await User.findByIdAndUpdate(
     req?.user._id,
     {
@@ -295,15 +261,12 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     )
 })
 
-// ab hum files mtlb avatar Update krege.
 
-// Phle hum req.file se file lege dyan rkhan only file ka use krege files nhi
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req?.file.path
   if (!avatarLocalPath) {
     throw new ApiError(400, ' Avatar File is Missing ')
   }
-  //cloudinary par uplod kr do.local path deke
   const avatar = await uploadOnCloudinary(avatarLocalPath)
   if (!avatar.url) {
     throw new ApiError(
@@ -312,7 +275,6 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     )
   }
 
-  // ab req.user me hmare pas pura login wala user hai jo verifyjwt se return hoga kyuki vo middleware route me hai isliye yha bhi return hoga
   const user = await User.findByIdAndUpdate(
     req?.user._id,
     {
@@ -360,4 +322,4 @@ export {
   updateUserAvatar,
   updateUserCoverImage
 }
-//  33:20  tk dekh liya hai mene logout krega ab
+
